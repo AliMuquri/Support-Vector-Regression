@@ -10,7 +10,7 @@ from tensorflow.keras.callbacks import ProgbarLogger, ModelCheckpoint
 class SupportVectorComponent(Module):
     ''' Provide the functionality for SVR '''
 
-    def __init__(self, input_dim, sigma=1):
+    def __init__(self, input_dim, sigma=10):
         ''' initilize the weights 
         Args:
         input_dim: the number of features in the data
@@ -67,7 +67,7 @@ class SupportVectorComponent(Module):
 class SupportVectorRegression(Model):
     ''' Performs train and predict of support vector regression'''
 
-    def __init__(self, input_dim, sigma=1.0):
+    def __init__(self, input_dim, sigma=5):
         ''' initilize the support vector component
         Args:
         input_dim: the number of features in the data
