@@ -5,7 +5,7 @@ import re
 
 class SupportVectorLoss(Loss):
     ''' loss function used for supporvector regression'''
-    def __init__(self, lambda_= 1e-3 , weights=None,  reduction=tf.keras.losses.Reduction.AUTO, name=None, epsilon=1):
+    def __init__(self, lambda_= 1e-4 , weights=None,  reduction=tf.keras.losses.Reduction.AUTO, name=None, epsilon=1):
         ''' initialize  constructor of the parent and sets epsilon 
         Args:
         epsilon: controls the width of the margin,

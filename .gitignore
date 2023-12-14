@@ -4,4 +4,6 @@ env/
 __pycache__/
 log/
 models/
+.vim_backups/
+
 Backup_model/

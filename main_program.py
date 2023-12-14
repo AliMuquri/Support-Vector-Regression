@@ -89,22 +89,22 @@ def main():
     train_gen = train_gen.shuffle(buffer_size=input_dim, reshuffle_each_iteration=True).batch(32).prefetch(buffer_size=tf.data.AUTOTUNE).repeat(None) #if you use infinite set then provide steps_per_epoch
     val_gen = val_gen.batch(32).prefetch(buffer_size=tf.data.AUTOTUNE)
 
-    rlp_obj = rlp('val_loss', factor=0.1 , patience=1, min_delta=1e-2,  min_lr =1e-15,  verbose=1)    
+    rlp_obj = rlp('val_loss', factor=0.1 , patience=1, min_delta=1e-1,  min_lr =1e-15,  verbose=1)    
 
     tb = TensorBoard(log_dir='log', histogram_freq=1)
     checkpoint = ModelCheckpoint(os.path.join(main_path, 'models'),save_best_only=True, save_freq=10000)
   
 
-    model = SupportVectorRegression(input_dim)
+    model = SupportVectorRegression(input_dim, sigma=0.6, kernel_type='pol')
     #model = tf.keras.models.load_model(os.path.join(main_path, 'models'), custom_objects={'SupportVectorLoss':sv_loss})
    
  
     
-    model.build((None,input_dim))
+    model.build((None,1,input_dim))
     
     model.summary()
-    model.compile(optimizer=Adam(learning_rate=10), loss=sv_loss(weights=model.trainable_weights), metrics=[rmse_metric()])
-    model.fit(train_gen, validation_data=val_gen, epochs=100000, steps_per_epoch=10000, callbacks=[rlp_obj, tb, checkpoint])
+    model.compile(optimizer=Adam(learning_rate=10), loss=sv_loss(weights=model.trainable_weights,lambda_=1e-4, epsilon=1.5), metrics=[rmse_metric()])
+    model.fit(train_gen, validation_data=val_gen, epochs=10000, steps_per_epoch=500, callbacks=[rlp_obj, tb, checkpoint])
 
     
 

@@ -10,17 +10,27 @@ from tensorflow.keras.callbacks import ProgbarLogger, ModelCheckpoint
 class SupportVectorComponent(Module):
     ''' Provide the functionality for SVR '''
 
-    def __init__(self, input_dim, sigma=10):
+    def __init__(self, input_dim, sigma=0.5, kernel_type='rbf'):
         ''' initilize the weights 
         Args:
         input_dim: the number of features in the data
         sigma: controls the width of the kernel
+        kernel_type: the type of kernel
         Returns:
         class object'''
         self.input_dim = input_dim
         self.alpha = tf.Variable(initial_value=tf.random.normal(shape=(self.input_dim,1)), name='alpha')
         self.bias = tf.Variable(initial_value= tf.zeros(shape=(1,1)), name='bias')
         self.sigma  =  sigma
+        self.kernel_type = kernel_type
+        
+        self.kernel_function  = None
+
+        if self.kernel_type == 'rbf':
+            self.kernel_function = self.kernel_rbf
+
+        if self.kernel_type == 'pol':
+            self.kernel_function = self.kernel_polynomial
 
 
     @tf.function
@@ -32,7 +42,22 @@ class SupportVectorComponent(Module):
         kernel: the kernel value
         '''
         pairwise_distance = tf.reduce_sum(tf.square(features[:, tf.newaxis] - features), axis=2)
-        kernel = tf.exp(-pairwise_distance /(2*self.sigma**2))       
+        kernel = tf.exp(-pairwise_distance /(2*self.sigma**2))
+        return kernel
+    
+    @tf.function
+    def kernel_polynomial(self, features, degree=7):
+        ''' computes the polynomial kernel value
+        Args:
+        feature: the data features
+        degree: the degree of the polynomial
+        Returns:
+        kernel: the kernel value '''
+
+        features_t = tf.transpose(features, perm=[0,2,1])
+
+        kernel = tf.pow(tf.matmul(features_t, features) + 1, degree)
+
         return kernel
 
     def __call__(self, inputs):
@@ -41,7 +66,8 @@ class SupportVectorComponent(Module):
         inputs: the data
         Returns:i
         output: the computed feedforward  '''
-        kernel_matrix = self.kernel_rbf(inputs)
+        
+        kernel_matrix = self.kernel_function(inputs)
      
         output = tf.matmul(kernel_matrix, self.alpha) + self.bias
        
@@ -52,7 +78,7 @@ class SupportVectorComponent(Module):
         Returns:
         config: congif dict
         '''
-        config = {'input_dim': self.input_dim, 'sigma': self.sigma}
+        config = {'input_dim': self.input_dim, 'sigma': self.sigma, 'kernel_type': self.kernel_type}
         return config
 
     @classmethod
@@ -67,18 +93,20 @@ class SupportVectorComponent(Module):
 class SupportVectorRegression(Model):
     ''' Performs train and predict of support vector regression'''
 
-    def __init__(self, input_dim, sigma=5):
+    def __init__(self, input_dim, sigma=0.5, kernel_type='rbf'):
         ''' initilize the support vector component
         Args:
         input_dim: the number of features in the data
-        epsilon: controls teh weidth of the margin
+        sigma: controls teh weidth of the margin
+        kernel_type: the type of kernel
         Returns:
         class object '''
         super(SupportVectorRegression, self).__init__()
         self.input_dim = input_dim
         self.sigma = sigma
-        self.sv_component = SupportVectorComponent(self.input_dim, self.sigma)
-
+        self.kernel_type = kernel_type
+        self.sv_component = SupportVectorComponent(self.input_dim, self.sigma, self.kernel_type)
+        
 
     @tf.function 
     def train_step(self, data):
@@ -230,6 +258,8 @@ class SupportVectorRegression(Model):
         inputs: the data
         Returns:
         output: the computed forward pass '''
+        
+        inputs = tf.ensure_shape(inputs, shape=(None, 1, self.input_dim))
         output= self.sv_component(inputs)
         return output
 
@@ -248,7 +278,7 @@ class SupportVectorRegression(Model):
         Returns:
         config: congif dict
         '''
-        config = {'input_dim': self.input_dim, 'sigma': self.sigma}
+        config = {'input_dim': self.input_dim, 'sigma': self.sigma, 'kernel_type': self.kernel_type}
         return config
     
     @classmethod
